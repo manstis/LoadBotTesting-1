@@ -1,12 +1,12 @@
-- name: 'Install Elasticsearch OSS on the system'
+---
+- name: Install Elasticsearch OSS on the system
   hosts:
-    - 'lfops_elasticsearch_oss'
+    - lfops_elasticsearch_oss
 
   roles:
-
-    - role: 'linuxfabrik.lfops.repo_elasticsearch_oss'
+    - role: linuxfabrik.lfops.repo_elasticsearch_oss
       when:
-        - 'ansible_facts["os_family"] == "RedHat"'
-        - 'not elasticsearch_oss__skip_repo_elasticsearch_oss | default(false)'
+        - ansible_facts["os_family"] == "RedHat"
+        - not elasticsearch_oss__skip_repo_elasticsearch_oss | default(false)
 
-    - role: 'linuxfabrik.lfops.elasticsearch_oss'
+    - role: linuxfabrik.lfops.elasticsearch_oss

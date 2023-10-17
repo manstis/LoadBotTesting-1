@@ -1,11 +1,11 @@
-- name: 'Install and configure Grafana'
+---
+- name: Install and configure Grafana
   hosts:
-    - 'lfops_grafana'
+    - lfops_grafana
 
   roles:
-
-    - role: 'linuxfabrik.lfops.repo_grafana'
+    - role: linuxfabrik.lfops.repo_grafana
       when:
-        - 'not grafana_server__skip_repo_grafana | d(false)'
+        - not grafana_server__skip_repo_grafana | d(false)
 
-    - role: 'linuxfabrik.lfops.grafana'
+    - role: linuxfabrik.lfops.grafana

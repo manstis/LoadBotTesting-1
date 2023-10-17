@@ -1,7 +1,7 @@
-- name: 'Deploys the Collabora Enterprise Repository'
+---
+- name: Deploys the Collabora Enterprise Repository
   hosts:
-    - 'lfops_repo_collabora'
+    - lfops_repo_collabora
 
   roles:
-
-    - role: 'linuxfabrik.lfops.repo_collabora'
+    - role: linuxfabrik.lfops.repo_collabora

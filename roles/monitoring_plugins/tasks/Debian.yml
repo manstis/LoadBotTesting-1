@@ -1,7 +1,8 @@
-- name: 'Make sure sudo is installed on debian or ubuntu'
+---
+- name: Make sure sudo is installed on debian or ubuntu
   ansible.builtin.apt:
-    name: 'sudo'
-    state: 'present'
+    name: sudo
+    state: present
     update_cache: true
   tags:
-    - 'monitoring-plugins'
+    - monitoring-plugins

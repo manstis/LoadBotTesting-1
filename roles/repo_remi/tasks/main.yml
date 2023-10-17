@@ -1,27 +1,26 @@
-- name: 'Set platform/version specific variables'
+---
+- name: Set platform/version specific variables
   ansible.builtin.import_role:
-    name: 'shared'
-    tasks_from: 'platform-variables.yml'
+    name: shared
+    tasks_from: platform-variables.yml
   tags:
-    - 'repo_remi'
+    - repo_remi
 
+- tags:
+    - repo_remi
 
-- block:
+  block:
 
-  - name: 'Deploy the repo files (mirror: {{ repo_remi__mirror_url | d("public mirrors") }})'
-    ansible.builtin.template:
-      src: '{{ item }}.j2'
-      dest: '/etc/yum.repos.d/{{ item | basename }}'
-      owner: 'root'
-      group: 'root'
-      mode: 0o644
-    loop: '{{ repo_remi__repo_files }}'
+    - name: 'Deploy the repo files (mirror: {{ repo_remi__mirror_url | d("public mirrors") }})'
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: /etc/yum.repos.d/{{ item | basename }}
+        owner: root
+        group: root
+        mode: "0o644"
+      loop: "{{ repo_remi__repo_files }}"
 
-  tags:
-    - 'repo_remi'
-
-
-- name: 'Perform platform/version specific tasks'
+- name: Perform platform/version specific tasks
   ansible.builtin.include_tasks: '{{ lookup("first_found", __task_file) }}'
   vars:
     __task_file:
@@ -33,7 +32,7 @@
         - '{{ ansible_facts["os_family"] }}{{ ansible_facts["distribution_major_version"] }}.yml'
         - '{{ ansible_facts["os_family"] }}.yml'
       paths:
-        - '{{ role_path }}/tasks'
+        - "{{ role_path }}/tasks"
   ignore_errors: true # TODO: this probably is a bug in the first_found lookup, according to the doc skip=true should work. else improve the ignore_errors statement
   tags:
-    - 'repo_remi'
+    - repo_remi

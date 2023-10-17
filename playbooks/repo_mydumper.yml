@@ -1,7 +1,7 @@
-- name: 'Configure the mydumper repository'
+---
+- name: Configure the mydumper repository
   hosts:
-    - 'lfops_repo_mydumper'
+    - lfops_repo_mydumper
 
   roles:
-
-    - role: 'linuxfabrik.lfops.repo_mydumper'
+    - role: linuxfabrik.lfops.repo_mydumper

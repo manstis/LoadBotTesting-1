@@ -1,259 +1,254 @@
-- block:
+---
+- tags:
+    - mongodb
 
-  - name: 'Set platform/version specific variables'
-    ansible.builtin.import_role:
-      name: 'shared'
-      tasks_from: 'platform-variables.yml'
+  block:
 
-  - name: 'Make sure that Ansible local facts directory exists'
-    ansible.builtin.file:
-      path: '/etc/ansible/facts.d'
-      state: 'directory'
-      owner: 'root'
-      group: 'root'
-      mode: 0o755
+    - name: Set platform/version specific variables
+      ansible.builtin.import_role:
+        name: shared
+        tasks_from: platform-variables.yml
 
-  - name: 'install mongodb-org'
-    ansible.builtin.package:
-      name: 'mongodb-org'
-      state: 'present'
+    - name: Make sure that Ansible local facts directory exists
+      ansible.builtin.file:
+        path: /etc/ansible/facts.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0o755"
 
-  - name: 'Get the list of installed packages'
-    ansible.builtin.package_facts:  # yamllint disable-line rule:empty-values
-    check_mode: false # run task even if `--check` is specified
+    - name: Install mongodb-org
+      ansible.builtin.package:
+        name: mongodb-org
+        state: present
 
-  - name: 'Get mongodb-org-server version'
-    ansible.builtin.set_fact:
-      mongodb__installed_version: '{{ ansible_facts["packages"]["mongodb-org-server"][0]["version"] | regex_replace("\.\d+$", "") }}' # strip the patch version
+    - name: Get the list of installed packages
+      ansible.builtin.package_facts: # yamllint disable-line rule:empty-values
+      check_mode: false # run task even if `--check` is specified
 
-  - name: 'Deploy /etc/mongod.conf'
-    ansible.builtin.template:
-      src: 'etc/{{ ansible_facts["os_family"] }}-{{ mongodb__installed_version }}-mongod.conf.j2'
-      dest: '/etc/mongod.conf'
-      owner: 'root'
-      group: 'root'
-      mode: 0o644
-    notify: 'mongodb: systemctl restart mongod.service'
+    - name: Get mongodb-org-server version
+      ansible.builtin.set_fact:
+        mongodb__installed_version: '{{ ansible_facts["packages"]["mongodb-org-server"][0]["version"] | regex_replace("\.\d+$", "") }}' # strip the patch version
 
-  - name: 'Deploy /etc/logrotate.d/mongod'
-    ansible.builtin.template:
-      src: 'etc/logrotate.d/mongod.j2'
-      dest: '/etc/logrotate.d/mongod'
-      owner: 'root'
-      group: 'root'
-      mode: 0o644
+    - name: Deploy /etc/mongod.conf
+      ansible.builtin.template:
+        src: etc/{{ ansible_facts["os_family"] }}-{{ mongodb__installed_version }}-mongod.conf.j2
+        dest: /etc/mongod.conf
+        owner: root
+        group: root
+        mode: "0o644"
+      notify: "mongodb: systemctl restart mongod.service"
 
-  - name: 'Deploy keyfile to /etc/mongod.key'
-    ansible.builtin.template:
-      src: 'etc/mongod.key.j2'
-      dest: '/etc/mongod.key'
-      owner: '{{ mongodb__mongodb_user }}'
-      group: '{{ mongodb__mongodb_user }}'
-      mode: 0o400 # contains secrets
-    when:
-      - 'mongodb__keyfile_content is defined and mongodb__keyfile_content | length'
+    - name: Deploy /etc/logrotate.d/mongod
+      ansible.builtin.template:
+        src: etc/logrotate.d/mongod.j2
+        dest: /etc/logrotate.d/mongod
+        owner: root
+        group: root
+        mode: "0o644"
 
+    - name: Deploy keyfile to /etc/mongod.key
+      ansible.builtin.template:
+        src: etc/mongod.key.j2
+        dest: /etc/mongod.key
+        owner: "{{ mongodb__mongodb_user }}"
+        group: "{{ mongodb__mongodb_user }}"
+        mode: "0o400" # contains secrets
+      when:
+        - mongodb__keyfile_content is defined and mongodb__keyfile_content | length
+
+- tags:
+    - mongodb
+    - mongodb:state
+
+  block:
+
+    - name: Systemctl {{ mongodb__service_enabled | bool | ternary("enable", "disable") }} mongod.service
+      ansible.builtin.systemd:
+        name: mongod.service
+        enabled: "{{ mongodb__service_enabled }}"
+
+    - name: Systemctl {{ mongodb__service_state[:-2] }} mongod.service
+      ansible.builtin.systemd:
+        name: mongod.service
+        state: "{{ mongodb__service_state }}"
+      register: mongodb__service_state_result
+
+- when:
+    - not mongodb__repl_set_skip_init
+    - mongodb__conf_replication_repl_set_name__combined_var | length
   tags:
-    - 'mongodb'
+    - mongodb
 
+  block:
 
-- block:
+    - name: Ensure replicaset "{{ mongodb__conf_replication_repl_set_name__combined_var }}" exists
+      community.mongodb.mongodb_replicaset:
+        login_host: "{{ mongodb__conf_net_bind_ip }}"
+        login_port: "{{ mongodb__conf_net_port }}"
+        login_user: '{{ mongodb__admin_user["username"] | default(omit) }}'
+        login_password: '{{ mongodb__admin_user["password"] | default(omit) }}'
+        login_database: admin
+        replica_set: "{{ mongodb__conf_replication_repl_set_name__combined_var }}"
+        members: "{{ mongodb__repl_set_members }}"
+        validate: "{{ (mongodb__repl_set_members | length > 1) | bool }}" # prevent error with only one member
+        debug: true
+      vars:
+        ansible_python_interpreter: /opt/python-venv/pymongo/bin/python3
 
-  - name: 'systemctl {{ mongodb__service_enabled | bool | ternary("enable", "disable") }} mongod.service'
-    ansible.builtin.systemd:
-      name: 'mongod.service'
-      enabled: '{{ mongodb__service_enabled }}'
+    - name: Wait for the replicaset to stabilise
+      community.mongodb.mongodb_status:
+        login_host: "{{ mongodb__conf_net_bind_ip }}"
+        login_port: "{{ mongodb__conf_net_port }}"
+        login_user: '{{ mongodb__admin_user["username"] | default(omit) }}'
+        login_password: '{{ mongodb__admin_user["password"] | default(omit) }}'
+        login_database: admin
+        replica_set: "{{ mongodb__conf_replication_repl_set_name__combined_var }}"
+        poll: 5
+        interval: 10
+      vars:
+        ansible_python_interpreter: /opt/python-venv/pymongo/bin/python3
 
-  - name: 'systemctl {{ mongodb__service_state[:-2] }} mongod.service'
-    ansible.builtin.systemd:
-      name: 'mongod.service'
-      state: '{{ mongodb__service_state }}'
-    register: 'mongodb__service_state_result'
+- tags:
+    - mongodb
+    - mongodb:dump
+    - mongodb:user
+    - mongodb:status
 
+  block:
+
+    - name: Check if host is primary and writable
+      community.mongodb.mongodb_shell:
+        login_host: "{{ mongodb__conf_net_bind_ip }}"
+        login_port: "{{ mongodb__conf_net_port }}"
+        eval: db.hello().isWritablePrimary
+        mongo_cmd: mongosh
+        transform: json
+      register: mongodb__is_writable_primary_result
+      changed_when: false # just gathering information
+      check_mode: false # run task even if `--check` is specified
+      vars:
+        ansible_python_interpreter: /opt/python-venv/pymongo/bin/python3
+
+- when:
+    - mongodb__is_writable_primary_result["transformed_output"]
   tags:
-    - 'mongodb'
-    - 'mongodb:state'
+    - mongodb
+    - mongodb:user
 
-- block:
+  block:
 
-  - name: 'Ensure replicaset "{{ mongodb__conf_replication_repl_set_name__combined_var }}" exists'
-    community.mongodb.mongodb_replicaset:
-      login_host: '{{ mongodb__conf_net_bind_ip }}'
-      login_port: '{{ mongodb__conf_net_port }}'
-      login_user: '{{ mongodb__admin_user["username"] | default(omit) }}'
-      login_password: '{{ mongodb__admin_user["password"] | default(omit) }}'
-      login_database: 'admin'
-      replica_set: '{{ mongodb__conf_replication_repl_set_name__combined_var }}'
-      members: '{{ mongodb__repl_set_members }}'
-      validate: '{{ (mongodb__repl_set_members | length > 1) | bool }}' # prevent error with only one member
-      debug: true
-    vars:
-      ansible_python_interpreter: '/opt/python-venv/pymongo/bin/python3'
+    - name: Make sure we restarted mongodb if the config changed
+      ansible.builtin.meta: flush_handlers
 
-  - name: 'Wait for the replicaset to stabilise'
-    community.mongodb.mongodb_status:
-      login_host: '{{ mongodb__conf_net_bind_ip }}'
-      login_port: '{{ mongodb__conf_net_port }}'
-      login_user: '{{ mongodb__admin_user["username"] | default(omit) }}'
-      login_password: '{{ mongodb__admin_user["password"] | default(omit) }}'
-      login_database: 'admin'
-      replica_set: '{{ mongodb__conf_replication_repl_set_name__combined_var }}'
-      poll: 5
-      interval: 10
-    vars:
-      ansible_python_interpreter: '/opt/python-venv/pymongo/bin/python3'
+    - name: Create DBA "{{ mongodb__admin_user["username"] }}" (if first user, using localhost exception) # https://www.mongodb.com/docs/manual/core/localhost-exception/
+      community.mongodb.mongodb_user:
+        login_host: "{{ mongodb__conf_net_bind_ip }}"
+        login_port: "{{ mongodb__conf_net_port }}"
+        name: '{{ mongodb__admin_user["username"] }}'
+        password: '{{ mongodb__admin_user["password"] }}'
+        database: admin
+        roles: root
+        state: present
+        update_password: always
+        create_for_localhost_exception: /etc/ansible/facts.d/mongodb__dba_created.state
+      when:
+        - mongodb__conf_security_authorization
+      vars:
+        ansible_python_interpreter: /opt/python-venv/pymongo/bin/python3
 
+    - name: Create, update or delete MongoDB users
+      community.mongodb.mongodb_user:
+        login_host: "{{ mongodb__conf_net_bind_ip }}"
+        login_port: "{{ mongodb__conf_net_port }}"
+        login_user: '{{ mongodb__admin_user["username"] }}'
+        login_password: '{{ mongodb__admin_user["password"] }}'
+        login_database: admin
+        name: '{{ item["username"] }}'
+        password: '{{ item["password"] }}'
+        database: '{{ item["database"] }}'
+        roles: '{{ item["roles"] | default(omit) }}'
+        state: '{{ item["state"] | default("present") }}'
+        update_password: always # note: sadly 'always' is not idempotent
+      loop: "{{ mongodb__users__combined_var }}"
+      vars:
+        ansible_python_interpreter: /opt/python-venv/pymongo/bin/python3
+
+- when:
+    - mongodb__is_writable_primary_result["transformed_output"]
+  tags:
+    - mongodb
+    - mongodb:dump
+    - mongodb:user
+
+  block:
+
+    - name: Create MongoDB Dump user
+      community.mongodb.mongodb_user:
+        login_host: "{{ mongodb__conf_net_bind_ip }}"
+        login_port: "{{ mongodb__conf_net_port }}"
+        login_user: '{{ mongodb__admin_user["username"] }}'
+        login_password: '{{ mongodb__admin_user["password"] }}'
+        login_database: admin
+        name: '{{ mongodb__dump_user["username"] }}'
+        password: '{{ mongodb__dump_user["password"] }}'
+        database: '{{ mongodb__dump_user["auth_database"] | d("admin") }}'
+        roles: backup # https://www.mongodb.com/docs/manual/reference/built-in-roles/#mongodb-authrole-backup
+        state: '{{ mongodb__dump_user["state"] | default("present") }}'
+        update_password: always # note: sadly 'always' is not idempotent
+      when:
+        - mongodb__dump_user is defined
+        - mongodb__dump_user | length
+      vars:
+        ansible_python_interpreter: /opt/python-venv/pymongo/bin/python3
+
+- tags:
+    - mongodb
+    - mongodb:dump
+
+  block:
+
+    - name: Deploy /etc/mongodb-dump.conf
+      ansible.builtin.template:
+        src: etc/mongodb-dump.conf.j2
+        dest: /etc/mongodb-dump.conf
+        owner: root
+        group: root
+        mode: "0o600"
+
+    - name: Deploy /usr/local/sbin/mongodb-dump
+      ansible.builtin.template:
+        src: usr/local/sbin/mongodb-dump.j2
+        dest: /usr/local/sbin/mongodb-dump
+        owner: root
+        group: root
+        mode: "0o755"
+
+    - name: Deploy /etc/systemd/system/mongodb-dump.service
+      ansible.builtin.template:
+        src: etc/systemd/system/mongodb-dump.service.j2
+        dest: /etc/systemd/system/mongodb-dump.service
+        owner: root
+        group: root
+        mode: "0o644"
+
+    - name: Deploy /etc/systemd/system/mongodb-dump.timer
+      ansible.builtin.template:
+        src: etc/systemd/system/mongodb-dump.timer.j2
+        dest: /etc/systemd/system/mongodb-dump.timer
+        owner: root
+        group: root
+        mode: "0o644"
+      register: mongodb__dump_systemd_timer_result
+
+    - name: Systemctl enable mongodb-dump.timer --now
+      ansible.builtin.systemd:
+        name: mongodb-dump.timer
+        state: started
+        enabled: true
+        daemon_reload: "{{ mongodb__dump_systemd_timer_result is changed }}"
+
+- ansible.builtin.debug:
+    msg: "NOTE: No user operations were executed as this is not the primary in the replica set. Make sure to run this role against the primary as well."
   when:
-    - 'not mongodb__repl_set_skip_init'
-    - 'mongodb__conf_replication_repl_set_name__combined_var | length'
-  tags:
-    - 'mongodb'
-
-
-- block:
-
-  - name: 'check if host is primary and writable'
-    community.mongodb.mongodb_shell:
-      login_host: '{{ mongodb__conf_net_bind_ip }}'
-      login_port: '{{ mongodb__conf_net_port }}'
-      eval: 'db.hello().isWritablePrimary'
-      mongo_cmd: 'mongosh'
-      transform: 'json'
-    register: 'mongodb__is_writable_primary_result'
-    changed_when: false # just gathering information
-    check_mode: false # run task even if `--check` is specified
-    vars:
-      ansible_python_interpreter: '/opt/python-venv/pymongo/bin/python3'
-
-  tags:
-    - 'mongodb'
-    - 'mongodb:dump'
-    - 'mongodb:user'
-    - 'mongodb:status'
-
-
-- block:
-
-  - name: 'make sure we restarted mongodb if the config changed'
-    ansible.builtin.meta: 'flush_handlers'
-
-  - name: 'Create DBA "{{ mongodb__admin_user["username"] }}" (if first user, using localhost exception)' # https://www.mongodb.com/docs/manual/core/localhost-exception/
-    community.mongodb.mongodb_user:
-      login_host: '{{ mongodb__conf_net_bind_ip }}'
-      login_port: '{{ mongodb__conf_net_port }}'
-      name: '{{ mongodb__admin_user["username"] }}'
-      password: '{{ mongodb__admin_user["password"] }}'
-      database: 'admin'
-      roles: 'root'
-      state: 'present'
-      update_password: 'always'
-      create_for_localhost_exception: '/etc/ansible/facts.d/mongodb__dba_created.state'
-    when:
-      - 'mongodb__conf_security_authorization'
-    vars:
-      ansible_python_interpreter: '/opt/python-venv/pymongo/bin/python3'
-
-  - name: 'Create, update or delete MongoDB users'
-    community.mongodb.mongodb_user:
-      login_host: '{{ mongodb__conf_net_bind_ip }}'
-      login_port: '{{ mongodb__conf_net_port }}'
-      login_user: '{{ mongodb__admin_user["username"] }}'
-      login_password: '{{ mongodb__admin_user["password"] }}'
-      login_database: 'admin'
-      name: '{{ item["username"] }}'
-      password: '{{ item["password"] }}'
-      database: '{{ item["database"] }}'
-      roles: '{{ item["roles"] | default(omit) }}'
-      state: '{{ item["state"] | default("present") }}'
-      update_password: 'always' # note: sadly 'always' is not idempotent
-    loop: '{{ mongodb__users__combined_var }}'
-    vars:
-      ansible_python_interpreter: '/opt/python-venv/pymongo/bin/python3'
-
-  when:
-    - 'mongodb__is_writable_primary_result["transformed_output"]'
-  tags:
-    - 'mongodb'
-    - 'mongodb:user'
-
-
-- block:
-
-  - name: 'Create MongoDB Dump user'
-    community.mongodb.mongodb_user:
-      login_host: '{{ mongodb__conf_net_bind_ip }}'
-      login_port: '{{ mongodb__conf_net_port }}'
-      login_user: '{{ mongodb__admin_user["username"] }}'
-      login_password: '{{ mongodb__admin_user["password"] }}'
-      login_database: 'admin'
-      name: '{{ mongodb__dump_user["username"] }}'
-      password: '{{ mongodb__dump_user["password"] }}'
-      database: '{{ mongodb__dump_user["auth_database"] | d("admin") }}'
-      roles: 'backup' # https://www.mongodb.com/docs/manual/reference/built-in-roles/#mongodb-authrole-backup
-      state: '{{ mongodb__dump_user["state"] | default("present") }}'
-      update_password: 'always' # note: sadly 'always' is not idempotent
-    when:
-      - 'mongodb__dump_user is defined'
-      - 'mongodb__dump_user | length'
-    vars:
-      ansible_python_interpreter: '/opt/python-venv/pymongo/bin/python3'
-
-  when:
-    - 'mongodb__is_writable_primary_result["transformed_output"]'
-  tags:
-    - 'mongodb'
-    - 'mongodb:dump'
-    - 'mongodb:user'
-
-
-- block:
-
-  - name: 'Deploy /etc/mongodb-dump.conf'
-    ansible.builtin.template:
-      src: 'etc/mongodb-dump.conf.j2'
-      dest: '/etc/mongodb-dump.conf'
-      owner: 'root'
-      group: 'root'
-      mode: 0o600
-
-  - name: 'Deploy /usr/local/sbin/mongodb-dump'
-    ansible.builtin.template:
-      src: 'usr/local/sbin/mongodb-dump.j2'
-      dest: '/usr/local/sbin/mongodb-dump'
-      owner: 'root'
-      group: 'root'
-      mode: 0o755
-
-  - name: 'Deploy /etc/systemd/system/mongodb-dump.service'
-    ansible.builtin.template:
-      src: 'etc/systemd/system/mongodb-dump.service.j2'
-      dest: '/etc/systemd/system/mongodb-dump.service'
-      owner: 'root'
-      group: 'root'
-      mode: 0o644
-
-  - name: 'Deploy /etc/systemd/system/mongodb-dump.timer'
-    ansible.builtin.template:
-      src: 'etc/systemd/system/mongodb-dump.timer.j2'
-      dest: '/etc/systemd/system/mongodb-dump.timer'
-      owner: 'root'
-      group: 'root'
-      mode: 0o644
-    register: 'mongodb__dump_systemd_timer_result'
-
-  - name: 'systemctl enable mongodb-dump.timer --now'
-    ansible.builtin.systemd:
-      name: 'mongodb-dump.timer'
-      state: 'started'
-      enabled: true
-      daemon_reload: '{{ mongodb__dump_systemd_timer_result is changed }}'
-
-  tags:
-    - 'mongodb'
-    - 'mongodb:dump'
-
-
-- debug:
-    msg: 'NOTE: No user operations were executed as this is not the primary in the replica set. Make sure to run this role against the primary as well.'
-  when:
-    - 'not mongodb__is_writable_primary_result["transformed_output"]'
+    - not mongodb__is_writable_primary_result["transformed_output"]

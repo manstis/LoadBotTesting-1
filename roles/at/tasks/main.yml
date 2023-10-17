@@ -1,19 +1,18 @@
-- name: 'Install at'
+---
+- name: Install at
   ansible.builtin.package:
-    name: 'at'
-    state: 'present'
+    name: at
+    state: present
   tags:
-    - 'at'
+    - at
 
+- tags:
+    - at
+    - at:state
+  block:
 
-- block:
-
-  - name: 'systemctl {{ at__service_enabled | bool | ternary("enable", "disable") }} --now atd'
-    ansible.builtin.service:
-      name: 'atd'
-      enabled: '{{ at__service_enabled }}'
-      state: '{{ at__service_enabled | bool | ternary("started", "stopped") }}'
-
-  tags:
-    - 'at'
-    - 'at:state'
+    - name: Systemctl {{ at__service_enabled | bool | ternary("enable", "disable") }} --now atd
+      ansible.builtin.service:
+        name: atd
+        enabled: "{{ at__service_enabled }}"
+        state: '{{ at__service_enabled | bool | ternary("started", "stopped") }}'

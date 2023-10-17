@@ -1,1 +1,2 @@
-yum_utils__package: 'yum-utils'
+---
+yum_utils__package: yum-utils

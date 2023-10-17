@@ -1,57 +1,54 @@
-duplicity__backup_dest: 'swift://{{ duplicity__backup_dest_container | regex_replace("/$", "") }}'
-duplicity__backup_dest_container: '{{ ansible_nodename }}'
-duplicity__backup_full_if_older_than: '30D'
-duplicity__backup_retention_time: '30D'
+---
+duplicity__backup_dest: swift://{{ duplicity__backup_dest_container | regex_replace("/$", "") }}
+duplicity__backup_dest_container: "{{ ansible_nodename }}"
+duplicity__backup_full_if_older_than: 30D
+duplicity__backup_retention_time: 30D
 
 duplicity__backup_sources__group_var: []
 duplicity__backup_sources__host_var: []
 duplicity__backup_sources__role_var:
-  - path: '/backup'
+  - path: /backup
     divide: false
-  - path: '/etc'
+  - path: /etc
     divide: false
-  - path: '/home'
+  - path: /home
     divide: false
-  - path: '/opt'
+  - path: /opt
     divide: false
-  - path: '/root'
+  - path: /root
     divide: false
-  - path: '/var/spool/cron'
+  - path: /var/spool/cron
     divide: false
-duplicity__backup_sources__combined_var: '{{
-    duplicity__backup_sources__role_var +
-    duplicity__backup_sources__group_var +
-    duplicity__backup_sources__host_var
-    | flatten
- }}'
+duplicity__backup_sources__combined_var: "{{ duplicity__backup_sources__role_var + duplicity__backup_sources__group_var + duplicity__backup_sources__host_var | flatten
+  }}"
 
 duplicity__excludes:
-  - '**/*.git*'
-  - '**/*.svn*'
-  - '**/*.temp'
-  - '**/*.tmp'
-  - '**/.cache'
-  - '**/cache'
-  - '**/log'
+  - "**/*.git*"
+  - "**/*.svn*"
+  - "**/*.temp"
+  - "**/*.tmp"
+  - "**/.cache"
+  - "**/cache"
+  - "**/log"
 
 duplicity__timer_enabled: true
-duplicity__on_calendar_hour: '23'
-duplicity__on_calendar: '*-*-* {{ duplicity__on_calendar_hour }}:{{ 59 | random(seed=inventory_hostname) }}'
+duplicity__on_calendar_hour: "23"
+duplicity__on_calendar: "*-*-* {{ duplicity__on_calendar_hour }}:{{ 59 | random(seed=inventory_hostname) }}"
 
-duplicity__loglevel: 'notice'
+duplicity__loglevel: notice
 
-duplicity__swift_authurl: 'https://swiss-backup02.infomaniak.com/identity/v3'
-duplicity__swift_authversion: '3'
-duplicity__swift_tenantname: 'sb_project_{{ duplicity__swift_login["username"] }}'
+duplicity__swift_authurl: https://swiss-backup02.infomaniak.com/identity/v3
+duplicity__swift_authversion: "3"
+duplicity__swift_tenantname: sb_project_{{ duplicity__swift_login["username"] }}
 
 duplicity__python_venv__venvs__dependent_var:
-  - name: 'duplicity'
+  - name: duplicity
     packages:
-      - 'duplicity'
-      - 'python-swiftclient'
-      - 'python-keystoneclient'
+      - duplicity
+      - python-swiftclient
+      - python-keystoneclient
     package_requirements:
-      - 'gcc'
-      - 'librsync-devel'
+      - gcc
+      - librsync-devel
     exposed_binaries:
-      - 'duplicity'
+      - duplicity

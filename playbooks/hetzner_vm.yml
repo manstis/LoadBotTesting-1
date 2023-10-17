@@ -1,8 +1,8 @@
-- name: 'Setup and manage an Hetzner VM'
+---
+- name: Setup and manage an Hetzner VM
   hosts:
-    - 'lfops_hetzner_vm'
+    - lfops_hetzner_vm
   gather_facts: false
 
   roles:
-
-    - role: 'linuxfabrik.lfops.hetzner_vm'
+    - role: linuxfabrik.lfops.hetzner_vm

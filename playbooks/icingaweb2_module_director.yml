@@ -1,7 +1,7 @@
-- name: 'Installs the Icingaweb2 Director Module'
+---
+- name: Installs the Icingaweb2 Director Module
   hosts:
-    - 'lfops_icingaweb2_module_director'
+    - lfops_icingaweb2_module_director
 
   roles:
-
-    - role: 'linuxfabrik.lfops.icingaweb2_module_director'
+    - role: linuxfabrik.lfops.icingaweb2_module_director

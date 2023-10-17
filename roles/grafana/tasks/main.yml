@@ -1,183 +1,178 @@
-- block:
+---
+- tags:
+    - grafana
 
-  - name: 'install grafana'
-    ansible.builtin.package:
-      name:
-        - 'grafana'
-      state: 'present'
+  block:
 
-  tags:
-    - 'grafana'
+    - name: Install grafana
+      ansible.builtin.package:
+        name:
+          - grafana
+        state: present
 
+- tags:
+    - grafana
+    - grafana:configure
 
-- block:
+  block:
 
-  - name: 'deploy /etc/grafana/grafana.ini'
-    ansible.builtin.template:
-      src: 'etc/grafana/grafana.ini.j2'
-      dest: '/etc/grafana/grafana.ini'
-      owner: 'root'
-      group: 'grafana'
-      mode: 0o640
-    notify: 'grafana: restart grafana-server'
+    - name: Deploy /etc/grafana/grafana.ini
+      ansible.builtin.template:
+        src: etc/grafana/grafana.ini.j2
+        dest: /etc/grafana/grafana.ini
+        owner: root
+        group: grafana
+        mode: "0o640"
+      notify: "grafana: restart grafana-server"
 
-  - name: 'deploy /etc/grafana/ldap.toml'
-    ansible.builtin.template:
-      src: 'etc/grafana/ldap.toml.j2'
-      dest: '/etc/grafana/ldap.toml'
-      owner: 'root'
-      group: 'grafana'
-      mode: 0o640
-    when: 'grafana__ldap_config is defined and grafana__ldap_config | length'
-    notify: 'grafana: restart grafana-server'
+    - name: Deploy /etc/grafana/ldap.toml
+      ansible.builtin.template:
+        src: etc/grafana/ldap.toml.j2
+        dest: /etc/grafana/ldap.toml
+        owner: root
+        group: grafana
+        mode: "0o640"
+      when: grafana__ldap_config is defined and grafana__ldap_config | length
+      notify: "grafana: restart grafana-server"
 
-  tags:
-    - 'grafana'
-    - 'grafana:configure'
+- tags:
+    - grafana
+    - grafana:provisioning
 
+  block:
 
-- block:
+    - name: Mkdir -p /etc/grafana/provisioning/datasources/
+      ansible.builtin.file:
+        path: /etc/grafana/provisioning/datasources/
+        state: directory
+        owner: grafana
+        group: grafana
+        recurse: true
 
-  - name: 'mkdir -p /etc/grafana/provisioning/datasources/'
-    ansible.builtin.file:
-      path: '/etc/grafana/provisioning/datasources/'
-      state: 'directory'
-      owner: 'grafana'
-      group: 'grafana'
-      recurse: true
+    - name: Deploy the grafana datasource provisioning file
+      ansible.builtin.template:
+        src: etc/grafana/provisioning/datasources/linuxfabrik-monitoring-plugins.yml.j2
+        dest: /etc/grafana/provisioning/datasources/linuxfabrik-monitoring-plugins.yml
+        owner: grafana
+        group: grafana
+        mode: "0o640"
+      notify: "grafana: restart grafana-server"
 
-  - name: 'deploy the grafana datasource provisioning file'
-    ansible.builtin.template:
-      src: 'etc/grafana/provisioning/datasources/linuxfabrik-monitoring-plugins.yml.j2'
-      dest: '/etc/grafana/provisioning/datasources/linuxfabrik-monitoring-plugins.yml'
-      owner: 'grafana'
-      group: 'grafana'
-      mode: 0o640
-    notify: 'grafana: restart grafana-server'
+    - name: Mkdir -p /etc/grafana/provisioning/dashboards/
+      ansible.builtin.file:
+        path: /etc/grafana/provisioning/dashboards/
+        state: directory
+        recurse: true
+        owner: grafana
+        group: grafana
 
-  - name: 'mkdir -p /etc/grafana/provisioning/dashboards/'
-    ansible.builtin.file:
-      path: '/etc/grafana/provisioning/dashboards/'
-      state: 'directory'
-      recurse: true
-      owner: 'grafana'
-      group: 'grafana'
+    - name: Deploy the grafana dashboard provisioning file
+      ansible.builtin.template:
+        src: etc/grafana/provisioning/dashboards/linuxfabrik-monitoring-plugins.yml.j2
+        dest: /etc/grafana/provisioning/dashboards/linuxfabrik-monitoring-plugins.yml
+        owner: grafana
+        group: grafana
+        mode: "0o640"
+      notify: "grafana: restart grafana-server"
 
-  - name: 'deploy the grafana dashboard provisioning file'
-    ansible.builtin.template:
-      src: 'etc/grafana/provisioning/dashboards/linuxfabrik-monitoring-plugins.yml.j2'
-      dest: '/etc/grafana/provisioning/dashboards/linuxfabrik-monitoring-plugins.yml'
-      owner: 'grafana'
-      group: 'grafana'
-      mode: 0o640
-    notify: 'grafana: restart grafana-server'
+- tags:
+    - grafana
+    - grafana:state
 
-  tags:
-    - 'grafana'
-    - 'grafana:provisioning'
+  block:
 
+    - name: Systemctl {{ grafana__service_enabled | bool | ternary("enable", "disable") }} --now grafana-server.service
+      ansible.builtin.systemd:
+        name: grafana-server.service
+        enabled: "{{ grafana__service_enabled }}"
+        state: '{{ grafana__service_enabled | bool | ternary("started", "stopped") }}'
 
-- block:
+- tags:
+    - grafana
 
-  - name: 'systemctl {{ grafana__service_enabled | bool | ternary("enable", "disable") }} --now grafana-server.service'
-    ansible.builtin.systemd:
-      name: 'grafana-server.service'
-      enabled: '{{ grafana__service_enabled }}'
-      state: '{{ grafana__service_enabled | bool | ternary("started", "stopped") }}'
+  block:
 
-  tags:
-    - 'grafana'
-    - 'grafana:state'
+    - name: Set the password for admin
+      ansible.builtin.command: grafana-cli admin reset-admin-password {{ grafana__admin_login["password"] }}
 
+- tags:
+    - grafana
+    - grafana:service_accounts
+  block:
 
-- block:
+    # https://grafana.com/docs/grafana/latest/developers/http_api/serviceaccount/
+    - name: Get list of service accounts
+      ansible.builtin.uri:
+        url: "{{ grafana__api_url }}/api/serviceaccounts/search"
+        user: '{{ grafana__admin_login["username"] }}'
+        password: '{{ grafana__admin_login["password"] }}'
+        force_basic_auth: true
+        body_format: json
+        headers:
+          Accept: application/json
+      register: grafana__service_accounts_list_result
 
-  - name: 'set the password for admin'
-    ansible.builtin.command: 'grafana-cli admin reset-admin-password {{ grafana__admin_login["password"] }}'
+    - name: Create service accounts
+      ansible.builtin.uri:
+        url: "{{ grafana__api_url }}/api/serviceaccounts"
+        user: '{{ grafana__admin_login["username"] }}'
+        password: '{{ grafana__admin_login["password"] }}'
+        force_basic_auth: true
+        method: POST
+        body: >
+          {
+            "name": "{{ item['name'] }}",
+            "role": "{{ item['role'] | d('Viewer') }}"
+          }
+        status_code: 201
+        body_format: json
+        headers:
+          Accept: application/json
+      register: grafana__service_accounts_create_result
+      loop: "{{ grafana__provisioning_service_accounts__combined_var }}"
+      when: item["name"] not in grafana__service_accounts_list_result["json"]["serviceAccounts"] | map(attribute="name")
+      changed_when: true # the task is either skipped when the account already exists, or a new account is created
 
-  tags:
-    - 'grafana'
+    - name: Create tokens for service accounts
+      ansible.builtin.uri:
+        url: '{{ grafana__api_url }}/api/serviceaccounts/{{ item["json"]["id"] }}/tokens'
+        user: '{{ grafana__admin_login["username"] }}'
+        password: '{{ grafana__admin_login["password"] }}'
+        force_basic_auth: true
+        method: POST
+        body: >
+          {
+            "name": "{{ item['item']['name'] }}",
+            "role": "{{ item['item']['role'] | d('Viewer') }}"
+          }
+        body_format: json
+        headers:
+          Accept: application/json
+      register: grafana__service_accounts_token_result
+      loop: '{{ grafana__service_accounts_create_result["results"] }}'
+      when:
+        - not (item["skipped"] is defined and item["skipped"])
+      changed_when: true # the task is either skipped when the account already exists, or a new token is created
 
+    - name: Display new service account tokens !! one time only !!
+      ansible.builtin.debug:
+        msg: 'Token for {{ item["json"]["name"] }}: {{ item["json"]["key"] }}'
+      loop: '{{ grafana__service_accounts_token_result["results"] }}'
+      when:
+        - not (item["skipped"] is defined and item["skipped"])
 
-- block:
-
-  # https://grafana.com/docs/grafana/latest/developers/http_api/serviceaccount/
-  - name: 'get list of service accounts'
-    ansible.builtin.uri:
-      url: '{{ grafana__api_url }}/api/serviceaccounts/search'
-      user: '{{ grafana__admin_login["username"] }}'
-      password: '{{ grafana__admin_login["password"] }}'
-      force_basic_auth: true
-      body_format: 'json'
-      headers:
-        Accept: 'application/json'
-    register: 'grafana__service_accounts_list_result'
-
-  - name: 'create service accounts'
-    ansible.builtin.uri:
-      url: '{{ grafana__api_url }}/api/serviceaccounts'
-      user: '{{ grafana__admin_login["username"] }}'
-      password: '{{ grafana__admin_login["password"] }}'
-      force_basic_auth: true
-      method: 'POST'
-      body: >
-        {
-          "name": "{{ item['name'] }}",
-          "role": "{{ item['role'] | d('Viewer') }}"
-        }
-      status_code: 201
-      body_format: 'json'
-      headers:
-        Accept: 'application/json'
-    register: 'grafana__service_accounts_create_result'
-    loop: '{{ grafana__provisioning_service_accounts__combined_var }}'
-    when: 'item["name"] not in grafana__service_accounts_list_result["json"]["serviceAccounts"] | map(attribute="name")'
-    changed_when: true # the task is either skipped when the account already exists, or a new account is created
-
-  - name: 'create tokens for service accounts'
-    ansible.builtin.uri:
-      url: '{{ grafana__api_url }}/api/serviceaccounts/{{ item["json"]["id"] }}/tokens'
-      user: '{{ grafana__admin_login["username"] }}'
-      password: '{{ grafana__admin_login["password"] }}'
-      force_basic_auth: true
-      method: 'POST'
-      body: >
-        {
-          "name": "{{ item['item']['name'] }}",
-          "role": "{{ item['item']['role'] | d('Viewer') }}"
-        }
-      body_format: 'json'
-      headers:
-        Accept: 'application/json'
-    register: 'grafana__service_accounts_token_result'
-    loop: '{{ grafana__service_accounts_create_result["results"] }}'
-    when:
-      - 'not (item["skipped"] is defined and item["skipped"])'
-    changed_when: true # the task is either skipped when the account already exists, or a new token is created
-
-  - name: 'display new service account tokens !! one time only !!'
-    ansible.builtin.debug:
-      msg: 'Token for {{ item["json"]["name"] }}: {{ item["json"]["key"] }}'
-    loop: '{{ grafana__service_accounts_token_result["results"] }}'
-    when:
-      - 'not (item["skipped"] is defined and item["skipped"])'
-
-  - name: 'store tokens to bitwarden'
-    linuxfabrik.lfops.bitwarden_item:
-      collection_id: '{{ grafana__bitwarden_collection_id }}'
-      organization_id: '{{ grafana__bitwarden_organization_id }}'
-      hostname: '{{ inventory_hostname }}'
-      purpose: 'Grafana Service Account Token'
-      username: '{{ item["json"]["name"] }}'
-      password: '{{ item["json"]["key"] }}'
-    loop: '{{ grafana__service_accounts_token_result["results"] }}'
-    delegate_to: 'localhost'
-    when:
-      - 'not grafana__skip_token_to_bitwarden'
-      - 'not (item["skipped"] is defined and item["skipped"])'
-      - 'grafana__bitwarden_collection_id is defined and grafana__bitwarden_collection_id | length'
-      - 'grafana__bitwarden_organization_id is defined and grafana__bitwarden_organization_id | length'
-
-  tags:
-    - 'grafana'
-    - 'grafana:service_accounts'
+    - name: Store tokens to bitwarden
+      linuxfabrik.lfops.bitwarden_item:
+        collection_id: "{{ grafana__bitwarden_collection_id }}"
+        organization_id: "{{ grafana__bitwarden_organization_id }}"
+        hostname: "{{ inventory_hostname }}"
+        purpose: Grafana Service Account Token
+        username: '{{ item["json"]["name"] }}'
+        password: '{{ item["json"]["key"] }}'
+      loop: '{{ grafana__service_accounts_token_result["results"] }}'
+      delegate_to: localhost
+      when:
+        - not grafana__skip_token_to_bitwarden
+        - not (item["skipped"] is defined and item["skipped"])
+        - grafana__bitwarden_collection_id is defined and grafana__bitwarden_collection_id | length
+        - grafana__bitwarden_organization_id is defined and grafana__bitwarden_organization_id | length

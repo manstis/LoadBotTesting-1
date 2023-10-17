@@ -1,3 +1,4 @@
+---
 # escape all backslashes for tty terminals
 motd__logo_tty: |+
   powered by
@@ -22,7 +23,7 @@ motd__logo_pty: |+
 # Warning messages inform users who are attempting to login to the system of their legal
 # status regarding the system and must include the name of the organization that owns the
 # system and any monitoring policies that are in place.
-motd__legal_notice: |+
+motd__legal_notice: |
   ************************************************************************
   *                                                                      *
   * This system is for the use of authorized users only. Individuals     *

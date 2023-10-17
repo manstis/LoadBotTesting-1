@@ -1,7 +1,7 @@
-- name: 'Manage and configure the BaseOS repositories'
+---
+- name: Manage and configure the BaseOS repositories
   hosts:
-    - 'lfops_repo_baseos'
+    - lfops_repo_baseos
 
   roles:
-
-    - role: 'linuxfabrik.lfops.repo_baseos'
+    - role: linuxfabrik.lfops.repo_baseos

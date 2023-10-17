@@ -1,7 +1,7 @@
-- name: 'Installs mailx and deploys wrapper scripts'
+---
+- name: Installs mailx and deploys wrapper scripts
   hosts:
-    - 'lfops_mailx'
+    - lfops_mailx
 
   roles:
-
-    - role: 'linuxfabrik.lfops.mailx'
+    - role: linuxfabrik.lfops.mailx
