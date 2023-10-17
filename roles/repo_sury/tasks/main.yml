@@ -1,12 +1,12 @@
-- block:
+---
+- tags:
+    - repo_sury
+  block:
 
-  - name: 'deploy the repo file (mirror: {{ repo_sury__mirror_url | default("") }})'
-    ansible.builtin.template:
-      src: 'etc/apt/sources.list.d/sury.list.j2'
-      dest: '/etc/apt/sources.list.d/sury.list'
-      owner: 'root'
-      group: 'root'
-      mode: 0o644
-
-  tags:
-    - 'repo_sury'
+    - name: 'Deploy the repo file (mirror: {{ repo_sury__mirror_url | default("") }})'
+      ansible.builtin.template:
+        src: etc/apt/sources.list.d/sury.list.j2
+        dest: /etc/apt/sources.list.d/sury.list
+        owner: root
+        group: root
+        mode: "0o644"

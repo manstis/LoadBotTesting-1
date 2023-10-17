@@ -1,3 +1,4 @@
-nfs_server__group: 'nogroup'
-nfs_server__nfs_server_package: 'nfs-kernel-server'
-nfs_server__owner: 'nobody'
+---
+nfs_server__group: nogroup
+nfs_server__nfs_server_package: nfs-kernel-server
+nfs_server__owner: nobody

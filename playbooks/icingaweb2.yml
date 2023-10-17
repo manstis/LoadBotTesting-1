@@ -1,57 +1,57 @@
-- name: 'Install and configure IcingaWeb2'
+---
+- name: Install and configure IcingaWeb2
   hosts:
-    - 'lfops_icingaweb2'
+    - lfops_icingaweb2
 
   roles:
-
-    - role: 'linuxfabrik.lfops.repo_epel'
+    - role: linuxfabrik.lfops.repo_epel
       when:
-        - 'ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] in ["7", "8"]'
+        - ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] in ["7", "8"]
 
-    - role: 'linuxfabrik.lfops.repo_mydumper'
+    - role: linuxfabrik.lfops.repo_mydumper
       when:
-        - 'ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] in ["7", "8"]' # currently doesn't work for fedora
-        - 'not icingaweb2__skip_repo_mydumper | default(false)'
+        - ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] in ["7", "8"] # currently doesn't work for fedora
+        - not icingaweb2__skip_repo_mydumper | default(false)
 
-    - role: 'linuxfabrik.lfops.repo_mariadb'
+    - role: linuxfabrik.lfops.repo_mariadb
       when:
-        - 'ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] in ["7", "8"]'
-        - 'not icingaweb2__skip_repo_mariadb | default(false)'
+        - ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] in ["7", "8"]
+        - not icingaweb2__skip_repo_mariadb | default(false)
 
-    - role: 'linuxfabrik.lfops.python'
-      python__modules__dependent_var: '{{ mariadb_server__python__modules__dependent_var | default([]) }}'
+    - role: linuxfabrik.lfops.python
+      python__modules__dependent_var: "{{ mariadb_server__python__modules__dependent_var | default([]) }}"
       when:
-        - 'not icingaweb2__skip_python | default(false)'
+        - not icingaweb2__skip_python | default(false)
 
-    - role: 'linuxfabrik.lfops.mariadb_server'
-      mariadb_server__databases__dependent_var: '{{ icingaweb2__mariadb_server__databases__dependent_var | default([]) }}'
+    - role: linuxfabrik.lfops.mariadb_server
+      mariadb_server__databases__dependent_var: "{{ icingaweb2__mariadb_server__databases__dependent_var | default([]) }}"
       mariadb_server__users__dependent_var:
-        - '{{ icingaweb2__mariadb_server__users__dependent_var | default({}) }}'
+        - "{{ icingaweb2__mariadb_server__users__dependent_var | default({}) }}"
       when:
-        - 'not icingaweb2__skip_mariadb_server | default(false)'
+        - not icingaweb2__skip_mariadb_server | default(false)
 
-    - role: 'linuxfabrik.lfops.yum_utils'
+    - role: linuxfabrik.lfops.yum_utils
       when:
-        - 'ansible_facts["os_family"] == "RedHat"'
-        - 'not icingaweb2__skip_yum_utils | default(false)'
+        - ansible_facts["os_family"] == "RedHat"
+        - not icingaweb2__skip_yum_utils | default(false)
 
-    - role: 'linuxfabrik.lfops.repo_remi'
+    - role: linuxfabrik.lfops.repo_remi
       when:
-        - 'ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] in ["7", "8"]'
-        - 'not icingaweb2__skip_repo_remi | default(false)'
+        - ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] in ["7", "8"]
+        - not icingaweb2__skip_repo_remi | default(false)
 
-    - role: 'linuxfabrik.lfops.php'
+    - role: linuxfabrik.lfops.php
       php__ini_upload_max_filesize__dependent_var:
-        - '{{ icingaweb2__php__ini_upload_max_filesize__dependent_var }}'
+        - "{{ icingaweb2__php__ini_upload_max_filesize__dependent_var }}"
       php__modules__dependent_var:
-        - '{{ icingaweb2__php__modules__dependent_var }}'
+        - "{{ icingaweb2__php__modules__dependent_var }}"
       when:
-        - 'not icingaweb2__skip_php | default(false)'
+        - not icingaweb2__skip_php | default(false)
 
-    - role: 'linuxfabrik.lfops.repo_icinga'
+    - role: linuxfabrik.lfops.repo_icinga
       when:
-        - 'not icingaweb2__skip_repo_icinga | default(false)'
+        - not icingaweb2__skip_repo_icinga | default(false)
 
     # TOOD: apache with injection
 
-    - role: 'linuxfabrik.lfops.icingaweb2'
+    - role: linuxfabrik.lfops.icingaweb2

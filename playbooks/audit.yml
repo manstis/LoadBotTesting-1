@@ -1,7 +1,7 @@
-- name: 'Install and configure audit'
+---
+- name: Install and configure audit
   hosts:
-    - 'lfops_audit'
+    - lfops_audit
 
   roles:
-
-    - role: 'linuxfabrik.lfops.audit'
+    - role: linuxfabrik.lfops.audit

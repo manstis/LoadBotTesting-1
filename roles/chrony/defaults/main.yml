@@ -1,3 +1,4 @@
+---
 chrony__service_enabled: true
 chrony__allow: []
 chrony__ntp_pools: []

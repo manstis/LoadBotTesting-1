@@ -1,7 +1,7 @@
-- name: 'Install haveged'
+---
+- name: Install haveged
   hosts:
-    - 'lfops_haveged'
+    - lfops_haveged
 
   roles:
-
-    - role: 'linuxfabrik.lfops.haveged'
+    - role: linuxfabrik.lfops.haveged

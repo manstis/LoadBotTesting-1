@@ -1,21 +1,21 @@
-- block:
+---
+- tags:
+    - mailx
+  block:
 
-  - name: 'Set platform/version specific variables'
-    ansible.builtin.import_role:
-      name: 'shared'
-      tasks_from: 'platform-variables.yml'
+    - name: Set platform/version specific variables
+      ansible.builtin.import_role:
+        name: shared
+        tasks_from: platform-variables.yml
 
-  - name: 'Install mailx package'
-    ansible.builtin.package:
-      name: '{{ mailx__package }}'
-      state: 'present'
+    - name: Install mailx package
+      ansible.builtin.package:
+        name: "{{ mailx__package }}"
+        state: present
 
-  - name: 'Deploy bash wrapper script that make sending mail easier to /root/send-mail'
-    ansible.builtin.template:
-      src: 'root/send-mail.j2'
-      dest: '/root/send-mail'
-      owner: 'root'
-      mode: 0o755
-
-  tags:
-    - 'mailx'
+    - name: Deploy bash wrapper script that make sending mail easier to /root/send-mail
+      ansible.builtin.template:
+        src: root/send-mail.j2
+        dest: /root/send-mail
+        owner: root
+        mode: "0o755"

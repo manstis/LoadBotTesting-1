@@ -1,7 +1,7 @@
-- name: 'Install Node.js'
+---
+- name: Install Node.js
   hosts:
-    - 'lfops_nodejs'
+    - lfops_nodejs
 
   roles:
-
-    - role: 'linuxfabrik.lfops.nodejs'
+    - role: linuxfabrik.lfops.nodejs

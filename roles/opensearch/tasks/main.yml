@@ -1,57 +1,56 @@
-- block:
+---
+- tags:
+    - opensearch
 
-  - name: 'Install opensearch{{ (opensearch__version__combined_var | length) | ternary("-" ~ opensearch__version__combined_var, "") }}'
-    ansible.builtin.package:
-      name:
-        - 'opensearch{{ (opensearch__version__combined_var | length) | ternary("-" ~ opensearch__version__combined_var, "") }}'
-      state: 'present'
+  block:
 
-  - name: 'Get the list of installed packages'
-    ansible.builtin.package_facts:  # yamllint disable-line rule:empty-values
-    check_mode: false # run task even if `--check` is specified
+    - name: Install opensearch{{ (opensearch__version__combined_var | length) | ternary("-" ~ opensearch__version__combined_var, "") }}
+      ansible.builtin.package:
+        name:
+          - opensearch{{ (opensearch__version__combined_var | length) | ternary("-" ~ opensearch__version__combined_var, "") }}
+        state: present
 
-  - name: 'Get installed OpenSearch version'
-    ansible.builtin.set_fact:
-      opensearch__installed_version: '{{ ansible_facts["packages"]["opensearch"][0]["version"] | regex_replace("\.\d+$", "") }}'
+    - name: Get the list of installed packages
+      ansible.builtin.package_facts: # yamllint disable-line rule:empty-values
+      check_mode: false # run task even if `--check` is specified
 
-  - name: 'Deploy /etc/opensearch/{{ opensearch__installed_version[:1] }}.x-opensearch.yml'
-    ansible.builtin.template:
-      src: 'etc/opensearch/{{ opensearch__installed_version[:1] }}.x-opensearch.yml.j2'
-      dest: '/etc/opensearch/opensearch.yml'
-      owner: 'opensearch'
-      group: 'opensearch'
-      mode: 0o644
-    notify: 'opensearch: restart opensearch'
+    - name: Get installed OpenSearch version
+      ansible.builtin.set_fact:
+        opensearch__installed_version: '{{ ansible_facts["packages"]["opensearch"][0]["version"] | regex_replace("\.\d+$", "") }}'
 
-  - name: 'mkdir -p {{ opensearch__path_data__combined_var }}'
-    ansible.builtin.file:
-      path: '{{ opensearch__path_data__combined_var }}'
-      state: 'directory'
-      owner: 'opensearch'
-      group: 'opensearch'
-      mode: '2755'
+    - name: Deploy /etc/opensearch/{{ opensearch__installed_version[:1] }}.x-opensearch.yml
+      ansible.builtin.template:
+        src: etc/opensearch/{{ opensearch__installed_version[:1] }}.x-opensearch.yml.j2
+        dest: /etc/opensearch/opensearch.yml
+        owner: opensearch
+        group: opensearch
+        mode: "0o644"
+      notify: "opensearch: restart opensearch"
 
-  - name: 'Deploy /etc/sysconfig/opensearch'
-    ansible.builtin.template:
-      src: 'etc/sysconfig/opensearch.j2'
-      dest: '/etc/sysconfig/opensearch'
-      owner: 'opensearch'
-      group: 'opensearch'
-      mode: 0o644
-    notify: 'opensearch: restart opensearch'
+    - name: Mkdir -p {{ opensearch__path_data__combined_var }}
+      ansible.builtin.file:
+        path: "{{ opensearch__path_data__combined_var }}"
+        state: directory
+        owner: opensearch
+        group: opensearch
+        mode: "2755"
 
-  tags:
-    - 'opensearch'
+    - name: Deploy /etc/sysconfig/opensearch
+      ansible.builtin.template:
+        src: etc/sysconfig/opensearch.j2
+        dest: /etc/sysconfig/opensearch
+        owner: opensearch
+        group: opensearch
+        mode: "0o644"
+      notify: "opensearch: restart opensearch"
 
+- tags:
+    - opensearch
+    - opensearch:state
+  block:
 
-- block:
-
-  - name: 'systemctl {{ opensearch__service_enabled | bool | ternary("enable", "disable") }} --now opensearch.service'
-    ansible.builtin.service:
-      name: 'opensearch.service'
-      enabled: '{{ opensearch__service_enabled }}'
-      state: '{{ opensearch__service_enabled | bool | ternary("started", "stopped") }}'
-
-  tags:
-    - 'opensearch'
-    - 'opensearch:state'
+    - name: Systemctl {{ opensearch__service_enabled | bool | ternary("enable", "disable") }} --now opensearch.service
+      ansible.builtin.service:
+        name: opensearch.service
+        enabled: "{{ opensearch__service_enabled }}"
+        state: '{{ opensearch__service_enabled | bool | ternary("started", "stopped") }}'

@@ -1,118 +1,119 @@
-- block:
+---
+- tags:
+    - icingaweb2_module_grafana
 
-  - name: 'mkdir -p /etc/icingaweb2/modules/grafana'
-    ansible.builtin.file:
-      path: '/etc/icingaweb2/modules/grafana'
-      state: 'directory'
-      owner: 'apache'
-      group: 'icingaweb2'
-      mode: 0o2770
+  block:
 
-  - name: 'mkdir -p /usr/share/icingaweb2/modules/grafana'
-    ansible.builtin.file:
-      path: '/usr/share/icingaweb2/modules/grafana'
-      state: 'directory'
-      owner: 'apache'
-      group: 'icingaweb2'
-      mode: 0o755
+    - name: Mkdir -p /etc/icingaweb2/modules/grafana
+      ansible.builtin.file:
+        path: /etc/icingaweb2/modules/grafana
+        state: directory
+        owner: apache
+        group: icingaweb2
+        mode: "0o2770"
 
-  - name: 'curl https://github.com/Mikesch-mp/icingaweb2-module-grafana/archive/{{ icingaweb2_module_grafana__version }}.tar.gz --output /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz'
-    ansible.builtin.get_url:
-      url: 'https://github.com/Mikesch-mp/icingaweb2-module-grafana/archive/{{ icingaweb2_module_grafana__version }}.tar.gz'
-      dest: '/tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz'
-    delegate_to: 'localhost'
-    run_once: true
-    check_mode: false # run task even if `--check` is specified
+    - name: Mkdir -p /usr/share/icingaweb2/modules/grafana
+      ansible.builtin.file:
+        path: /usr/share/icingaweb2/modules/grafana
+        state: directory
+        owner: apache
+        group: icingaweb2
+        mode: "0o755"
 
-  - name: 'copy /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz to the server'
-    ansible.builtin.copy:
-      src: '/tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz'
-      dest: '/tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz'
+    - name: Curl https://github.com/Mikesch-mp/icingaweb2-module-grafana/archive/{{ icingaweb2_module_grafana__version }}.tar.gz --output /tmp/ansible.icingaweb2-module-grafana-{{
+        icingaweb2_module_grafana__version }}.tar.gz
+      ansible.builtin.get_url:
+        url: https://github.com/Mikesch-mp/icingaweb2-module-grafana/archive/{{ icingaweb2_module_grafana__version }}.tar.gz
+        dest: /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz
+      delegate_to: localhost
+      run_once: true
+      check_mode: false # run task even if `--check` is specified
 
-  - name: 'tar xfz --strip-components 1 -C /usr/share/icingaweb2/modules/grafana /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz'
-    ansible.builtin.unarchive:
-      src: '/tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz'
-      dest: '/usr/share/icingaweb2/modules/grafana'
-      remote_src: false
-      extra_opts:
-        - '--strip-components=1'
+    - name: Copy /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz to the server
+      ansible.builtin.copy:
+        src: /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz
+        dest: /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz
 
-  - name: 'rm -f /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz'
-    ansible.builtin.file:
-      path: '/tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz'
-      state: 'absent'
+    - name: Tar xfz --strip-components 1 -C /usr/share/icingaweb2/modules/grafana /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz
+      ansible.builtin.unarchive:
+        src: /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz
+        dest: /usr/share/icingaweb2/modules/grafana
+        remote_src: false
+        extra_opts:
+          - --strip-components=1
 
-  - name: 'icingacli module enable grafana'
-    ansible.builtin.command: 'icingacli module enable grafana'
-    args:
-      creates: '/etc/icingaweb2/enabledModules/grafana'
+    - name: Rm -f /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz
+      ansible.builtin.file:
+        path: /tmp/ansible.icingaweb2-module-grafana-{{ icingaweb2_module_grafana__version }}.tar.gz
+        state: absent
 
-  - name: 'Deploy /etc/icingaweb2/modules/grafana/config.ini'
-    ansible.builtin.template:
-      src: 'etc/icingaweb2/modules/grafana/config.ini.j2'
-      dest: '/etc/icingaweb2/modules/grafana/config.ini'
-      owner: 'apache'
-      group: 'icingaweb2'
-      mode: 0o660
+    - name: Icingacli module enable grafana
+      ansible.builtin.command: icingacli module enable grafana
+      args:
+        creates: /etc/icingaweb2/enabledModules/grafana
 
+    - name: Deploy /etc/icingaweb2/modules/grafana/config.ini
+      ansible.builtin.template:
+        src: etc/icingaweb2/modules/grafana/config.ini.j2
+        dest: /etc/icingaweb2/modules/grafana/config.ini
+        owner: apache
+        group: icingaweb2
+        mode: "0o660"
+
+- when:
+    - not icingaweb2_module_grafana__skip_monitoring_plugins_graphs_config
   tags:
-    - 'icingaweb2_module_grafana'
+    - icingaweb2_module_grafana
+    - icingaweb2_module_grafana:monitoring_plugins_graphs
+  block:
 
+    - name: Clone the monitoring plugins repo
+      ansible.builtin.import_role:
+        name: shared
+        tasks_from: clone-monitoring-plugins-repo.yml
+      vars:
+        shared__monitoring_plugins_repo_version: "{{ icingaweb2_module_grafana__monitoring_plugins_version }}"
 
-- block:
+    - name: Generate list of monitoring plugins
+      ansible.builtin.import_role:
+        name: monitoring_plugins
+        tasks_from: generate-monitoring-plugins-list.yml
 
-  - name: 'Clone the monitoring plugins repo'
-    ansible.builtin.import_role:
-      name: 'shared'
-      tasks_from: 'clone-monitoring-plugins-repo.yml'
-    vars:
-      shared__monitoring_plugins_repo_version: '{{ icingaweb2_module_grafana__monitoring_plugins_version }}'
+    - name: Copy the global icingaweb2 module grafana ini files to /tmp/ansible.icingaweb2-module-grafana-inis
+      ansible.builtin.copy:
+        src: /tmp/ansible.monitoring-plugins-repo/assets/icingaweb2-module-grafana/{{ item }}
+        dest: /tmp/ansible.icingaweb2-module-grafana-inis/
+      delegate_to: localhost
+      run_once: true
+      check_mode: false # run task even if `--check` is specified
+      loop:
+        - icinga.ini
 
-  - name: 'Generate list of monitoring plugins'
-    ansible.builtin.import_role:
-      name: 'monitoring_plugins'
-      tasks_from: 'generate-monitoring-plugins-list.yml'
+    - name: Copy the icingaweb2 module grafana ini files to /tmp/ansible.icingaweb2-module-grafana-inis
+      ansible.builtin.copy:
+        src: /tmp/ansible.monitoring-plugins-repo/check-plugins/{{ item }}/icingaweb2-module-grafana/{{ item }}.ini
+        dest: /tmp/ansible.icingaweb2-module-grafana-inis/
+      when: '"/tmp/ansible.monitoring-plugins-repo/check-plugins/item/icingaweb2-module-grafana/item.ini" is file'
+      loop: "{{ monitoring_plugins__plugin_list }}"
+      delegate_to: localhost
+      run_once: true
+      check_mode: false # run task even if `--check` is specified
 
-  - name: 'Copy the global icingaweb2 module grafana ini files to /tmp/ansible.icingaweb2-module-grafana-inis'
-    ansible.builtin.copy:
-      src: '/tmp/ansible.monitoring-plugins-repo/assets/icingaweb2-module-grafana/{{ item }}'
-      dest: '/tmp/ansible.icingaweb2-module-grafana-inis/'
-    delegate_to: 'localhost'
-    run_once: true
-    check_mode: false # run task even if `--check` is specified
-    loop:
-      - 'icinga.ini'
+    - name: Assemble /tmp/ansible.icingaweb2-module-grafana-combined.ini
+      ansible.builtin.assemble:
+        src: /tmp/ansible.icingaweb2-module-grafana-inis
+        dest: /tmp/ansible.icingaweb2-module-grafana-combined.ini
+        delimiter: \n\n
+      delegate_to: localhost
+      run_once: true
+      check_mode: false # run task even if `--check` is specified
 
-  - name: 'Copy the icingaweb2 module grafana ini files to /tmp/ansible.icingaweb2-module-grafana-inis'
-    ansible.builtin.copy:
-      src: '/tmp/ansible.monitoring-plugins-repo/check-plugins/{{ item }}/icingaweb2-module-grafana/{{ item }}.ini'
-      dest: '/tmp/ansible.icingaweb2-module-grafana-inis/'
-    when: '"/tmp/ansible.monitoring-plugins-repo/check-plugins/{{ item }}/icingaweb2-module-grafana/{{ item }}.ini" is file'
-    loop: '{{ monitoring_plugins__plugin_list }}'
-    delegate_to: 'localhost'
-    run_once: true
-    check_mode: false # run task even if `--check` is specified
-
-  - name: 'Assemble /tmp/ansible.icingaweb2-module-grafana-combined.ini'
-    ansible.builtin.assemble:
-      src: '/tmp/ansible.icingaweb2-module-grafana-inis'
-      dest: '/tmp/ansible.icingaweb2-module-grafana-combined.ini'
-      delimiter: '\n\n'
-    delegate_to: 'localhost'
-    run_once: true
-    check_mode: false # run task even if `--check` is specified
-
-  - name: 'Copy /tmp/ansible.icingaweb2-module-grafana-combined.ini to /etc/icingaweb2/modules/grafana/graphs.ini'
-    ansible.builtin.copy:
-      src: '/tmp/ansible.icingaweb2-module-grafana-combined.ini'
-      dest: '/etc/icingaweb2/modules/grafana/graphs.ini'
-      owner: 'apache'
-      group: 'icingaweb2'
-      mode: 0o664
+    - name: Copy /tmp/ansible.icingaweb2-module-grafana-combined.ini to /etc/icingaweb2/modules/grafana/graphs.ini
+      ansible.builtin.copy:
+        src: /tmp/ansible.icingaweb2-module-grafana-combined.ini
+        dest: /etc/icingaweb2/modules/grafana/graphs.ini
+        owner: apache
+        group: icingaweb2
+        mode: "0o664"
 
   # block
-  when:
-    - 'not icingaweb2_module_grafana__skip_monitoring_plugins_graphs_config'
-  tags:
-    - 'icingaweb2_module_grafana'
-    - 'icingaweb2_module_grafana:monitoring_plugins_graphs'

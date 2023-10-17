@@ -1,114 +1,111 @@
-- block:
+---
+- tags:
+    - duplicity
 
-  - name: 'mkdir /etc/duba'
-    ansible.builtin.file:
-      path: '/etc/duba'
-      state: 'directory'
-      owner: 'root'
-      group: 'root'
-      mode: 0o755
+  block:
 
-  tags:
-    - 'duplicity'
+    - name: Mkdir /etc/duba
+      ansible.builtin.file:
+        path: /etc/duba
+        state: directory
+        owner: root
+        group: root
+        mode: "0o755"
 
+- tags:
+    - duplicity
+    - duplicity:configure
 
-- block:
+  block:
 
-  - name: 'Generate local gpg key'
-    linuxfabrik.lfops.gpg_key:
-      name_real: 'duplicity'
-      name_email: 'root@{{ ansible_facts["nodename"] }}'
-      key_type: 'RSA'
-      key_length: 4096
-    register: 'duplicity__gpg_encrypt_local_key'
+    - name: Generate local gpg key
+      linuxfabrik.lfops.gpg_key:
+        name_real: duplicity
+        name_email: root@{{ ansible_facts["nodename"] }}
+        key_type: RSA
+        key_length: 4096
+      register: duplicity__gpg_encrypt_local_key
 
-  - name: 'Deploy the public master GPG key to /tmp/public-master-key'
-    ansible.builtin.copy:
-      dest: '/tmp/public-master-key'
-      content: '{{ duplicity__gpg_encrypt_master_key_block }}'
-      mode: 0o600
-    changed_when: false
+    - name: Deploy the public master GPG key to /tmp/public-master-key
+      ansible.builtin.copy:
+        dest: /tmp/public-master-key
+        content: "{{ duplicity__gpg_encrypt_master_key_block }}"
+        mode: "0o600"
+      changed_when: false
 
-  - name: 'gpg --import /tmp/public-master-key'
-    ansible.builtin.command: 'gpg --import /tmp/public-master-key'
-    register: 'duplicity__gpg_import_result'
-    changed_when: '"not changed" not in duplicity__gpg_import_result.stderr'
+    - name: Gpg --import /tmp/public-master-key
+      ansible.builtin.command: gpg --import /tmp/public-master-key
+      register: duplicity__gpg_import_result
+      changed_when: '"not changed" not in duplicity__gpg_import_result.stderr'
 
-  - name: 'gpg --import /tmp/public-master-key'
-    ansible.builtin.command: 'gpg --import /tmp/public-master-key'
-    register: 'duplicity__gpg_import_result'
-    changed_when: '"not changed" not in duplicity__gpg_import_result.stderr'
+    - name: Gpg --import /tmp/public-master-key
+      ansible.builtin.command: gpg --import /tmp/public-master-key
+      register: duplicity__gpg_import_result
+      changed_when: '"not changed" not in duplicity__gpg_import_result.stderr'
 
-  - name: 'rm -f /tmp/public-master-key'
-    ansible.builtin.file:
-      path: '/tmp/public-master-key'
-      state: 'absent'
-    changed_when: false
+    - name: Rm -f /tmp/public-master-key
+      ansible.builtin.file:
+        path: /tmp/public-master-key
+        state: absent
+      changed_when: false
 
-  - name: "echo '{{ duplicity__gpg_encrypt_master_key }}:6:' | gpg --import-ownertrust # set trust to ultimate"
-    ansible.builtin.shell: "echo '{{ duplicity__gpg_encrypt_master_key }}:6:' | gpg --import-ownertrust"
-    register: 'duplicity__gpg_import_ownertrust_result'
-    changed_when: '"ownertrust" in duplicity__gpg_import_ownertrust_result.stderr'
+    - name: "Echo '{{ duplicity__gpg_encrypt_master_key }}:6:' | gpg --import-ownertrust # set trust to ultimate"
+      ansible.builtin.shell: echo '{{ duplicity__gpg_encrypt_master_key }}:6:' | gpg --import-ownertrust
+      register: duplicity__gpg_import_ownertrust_result
+      changed_when: '"ownertrust" in duplicity__gpg_import_ownertrust_result.stderr'
 
-  - name: 'Deploy /etc/duba/duba.json'
-    ansible.builtin.template:
-      src: 'etc/duba/duba.json.j2'
-      dest: '/etc/duba/duba.json'
-      mode: 0o600 # file contains secrets
+    - name: Deploy /etc/duba/duba.json
+      ansible.builtin.template:
+        src: etc/duba/duba.json.j2
+        dest: /etc/duba/duba.json
+        mode: "0o600" # file contains secrets
 
-  - name: 'Deploy /etc/systemd/system/duba.service'
-    ansible.builtin.template:
-      src: 'etc/systemd/system/duba.service.j2'
-      dest: '/etc/systemd/system/duba.service'
-      owner: 'root'
-      group: 'root'
-      mode: 0o644
+    - name: Deploy /etc/systemd/system/duba.service
+      ansible.builtin.template:
+        src: etc/systemd/system/duba.service.j2
+        dest: /etc/systemd/system/duba.service
+        owner: root
+        group: root
+        mode: "0o644"
 
-  - name: 'Deploy /etc/systemd/system/duba.timer'
-    ansible.builtin.template:
-      src: 'etc/systemd/system/duba.timer.j2'
-      dest: '/etc/systemd/system/duba.timer'
-      owner: 'root'
-      group: 'root'
-      mode: 0o644
-    register: 'duplicity__systemd_duba_timer_result'
+    - name: Deploy /etc/systemd/system/duba.timer
+      ansible.builtin.template:
+        src: etc/systemd/system/duba.timer.j2
+        dest: /etc/systemd/system/duba.timer
+        owner: root
+        group: root
+        mode: "0o644"
+      register: duplicity__systemd_duba_timer_result
 
-  - name: 'Deploy /etc/logrotate.d/duplicity'
-    ansible.builtin.template:
-      src: 'etc/logrotate.d/duplicity.j2'
-      dest: '/etc/logrotate.d/duplicity'
-      owner: 'root'
-      mode: 0o644
+    - name: Deploy /etc/logrotate.d/duplicity
+      ansible.builtin.template:
+        src: etc/logrotate.d/duplicity.j2
+        dest: /etc/logrotate.d/duplicity
+        owner: root
+        mode: "0o644"
 
-  tags:
-    - 'duplicity'
-    - 'duplicity:configure'
+- tags:
+    - duplicity
+    - duplicity:configure
+    - duplicity:script
 
+  block:
 
-- block:
+    - name: Deploy /usr/local/bin/duba
+      ansible.builtin.template:
+        src: usr/local/bin/duba.j2
+        dest: /usr/local/bin/duba
+        owner: root
+        mode: "0o755"
 
-  - name: 'Deploy /usr/local/bin/duba'
-    ansible.builtin.template:
-      src: 'usr/local/bin/duba.j2'
-      dest: '/usr/local/bin/duba'
-      owner: 'root'
-      mode: 0o755
+- tags:
+    - duplicity
+    - duplicity:state
+  block:
 
-  tags:
-    - 'duplicity'
-    - 'duplicity:configure'
-    - 'duplicity:script'
-
-
-- block:
-
-  - name: 'systemctl {{ duplicity__timer_enabled | bool | ternary("enable", "disable") }} duba.timer --now'
-    ansible.builtin.systemd:
-      name: 'duba.timer'
-      state: '{{ duplicity__timer_enabled | bool | ternary("started", "stopped") }}'
-      enabled: '{{ duplicity__timer_enabled }}'
-      daemon_reload: '{{ duplicity__systemd_duba_timer_result is changed }}'
-
-  tags:
-    - 'duplicity'
-    - 'duplicity:state'
+    - name: Systemctl {{ duplicity__timer_enabled | bool | ternary("enable", "disable") }} duba.timer --now
+      ansible.builtin.systemd:
+        name: duba.timer
+        state: '{{ duplicity__timer_enabled | bool | ternary("started", "stopped") }}'
+        enabled: "{{ duplicity__timer_enabled }}"
+        daemon_reload: "{{ duplicity__systemd_duba_timer_result is changed }}"
